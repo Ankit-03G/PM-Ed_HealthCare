@@ -28,6 +28,99 @@ if 'generated_materials' not in st.session_state:
     st.session_state.generated_materials = []
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
+if 'patient_assessments' not in st.session_state:
+    st.session_state.patient_assessments = {}
+
+
+def generate_knowledge_assessment(patient_info):
+    """Generates a personalized quiz to assess patient knowledge of their condition."""
+    try:
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        
+        prompt = f"""
+        Create a knowledge assessment quiz for a patient with the following profile:
+        - Condition: {patient_info['condition']}
+        - Education Level: {patient_info['education_level']}
+        - Learning Style: {patient_info['learning_style']}
+        
+        Generate 5 multiple-choice questions that assess the patient's understanding of:
+        1. Basic condition information
+        2. Treatment rationale
+        3. Medication understanding
+        4. Self-management techniques
+        5. Warning signs requiring medical attention
+        
+        For each question, provide:
+        - The question text
+        - 4 possible answers (with one correct answer)
+        - An explanation of why the correct answer is right
+        - The knowledge category being tested
+        
+        Format the response as a valid JSON object with the following structure:
+        {{
+            "questions": [
+                {{
+                    "text": "Question text",
+                    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                    "correct_answer": "Correct option",
+                    "explanation": "Explanation of the correct answer",
+                    "category": "Category being tested"
+                }},
+                ...
+            ]
+        }}
+        """
+        
+        # Generate the response
+        response = model.generate_content(prompt)
+        
+        # Debug: Print the raw response
+        st.write("Raw API Response:", response.text)
+        
+        # Clean the response by removing triple backticks and the "json" keyword
+        cleaned_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+        
+        # Parse JSON response
+        try:
+            assessment = json.loads(cleaned_response)
+            return assessment
+        except json.JSONDecodeError as e:
+            st.error(f"Failed to parse assessment: {e}")
+            st.error(f"Cleaned response: {cleaned_response}")
+            return {"error": "Failed to parse assessment", "raw_response": cleaned_response}
+    
+    except Exception as e:
+        st.error(f"Error generating assessment: {e}")
+        return {"error": "Failed to generate assessment"}
+    
+    
+# Add this function to evaluate user responses
+def evaluate_responses(assessment, user_responses):
+    """Evaluates user responses to the knowledge assessment."""
+    results = {
+        "total_questions": len(assessment["questions"]),
+        "correct_answers": 0,
+        "incorrect_answers": 0,
+        "feedback": []
+    }
+    
+    for i, question in enumerate(assessment["questions"]):
+        user_answer = user_responses.get(f"question_{i}")
+        if user_answer == question["correct_answer"]:
+            results["correct_answers"] += 1
+            feedback = f"✅ Correct! {question['explanation']}"
+        else:
+            results["incorrect_answers"] += 1
+            feedback = f"❌ Incorrect. The correct answer is: {question['correct_answer']}. {question['explanation']}"
+        
+        results["feedback"].append({
+            "question": question["text"],
+            "user_answer": user_answer,
+            "correct_answer": question["correct_answer"],
+            "feedback": feedback
+        })
+    
+    return results
 
 # Function to generate personalized patient education material
 def analyze_injury(image, description):
@@ -169,11 +262,13 @@ def save_data():
         "patients": st.session_state.patient_records,
         "materials": st.session_state.generated_materials,
         "chat_history": st.session_state.chat_history,
-        "injury_assessments": st.session_state.injury_assessments if 'injury_assessments' in st.session_state else []
+        "injury_assessments": st.session_state.injury_assessments if 'injury_assessments' in st.session_state else [],
+        "patient_assessments": st.session_state.patient_assessments
     }
     with open("patient_education_data.json", "w") as f:
         json.dump(data, f)
 
+# Update the load_data function
 def load_data():
     try:
         with open("patient_education_data.json", "r") as f:
@@ -182,11 +277,14 @@ def load_data():
             st.session_state.generated_materials = data.get("materials", [])
             st.session_state.chat_history = data.get("chat_history", {})
             st.session_state.injury_assessments = data.get("injury_assessments", [])
+            st.session_state.patient_assessments = data.get("patient_assessments", {})
     except FileNotFoundError:
         st.session_state.patient_records = []
         st.session_state.generated_materials = []
         st.session_state.chat_history = {}
         st.session_state.injury_assessments = []
+        st.session_state.patient_assessments = {}
+
 
 # Load existing data on app start
 load_data()
@@ -293,7 +391,7 @@ st.markdown("""
 
 # Sidebar navigation - Removed About and API config sections
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Home", "Add Patient", "Generate Materials", "Patient Chat", "View Materials", "Analytics", "Injury Assessment"])
+page = st.sidebar.radio("Go to", ["Home", "Add Patient", "Generate Materials", "Patient Chat", "View Materials", "Analytics", "Injury Assessment" , "Knowledge Assessment"])
 
 
 # Home page with enhanced design
@@ -854,3 +952,93 @@ elif page == "Analytics":
         # Display raw data
         with st.expander("View Raw Data"):
             st.dataframe(materials_df)
+
+elif page == "Knowledge Assessment":
+    st.title("📝 Knowledge Assessment")
+    
+    if not st.session_state.patient_records:
+        st.warning("No patients found. Please add patients first.")
+    else:
+        # Patient selection
+        patient_names = [f"{p['name']} - {p['condition']}" for p in st.session_state.patient_records]
+        selected_patient = st.selectbox("Select Patient", patient_names)
+        
+        # Get the selected patient's index
+        patient_index = patient_names.index(selected_patient)
+        patient = st.session_state.patient_records[patient_index]
+        patient_id = patient["id"]
+        
+        # Display patient information
+        with st.expander("Patient Information", expanded=True):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f"*Name:* {patient['name']}")
+                st.markdown(f"*Age:* {patient['age']}")
+                st.markdown(f"*Gender:* {patient['gender']}")
+                st.markdown(f"*Education Level:* {patient['education_level']}")
+                st.markdown(f"*Primary Language:* {patient['language']}")
+            
+            with col2:
+                st.markdown(f"*Medical Condition:* {patient['condition']}")
+                st.markdown(f"*Treatment Plan:* {patient['treatment']}")
+                st.markdown(f"*Medications:* {patient['medications']}")
+                st.markdown(f"*Learning Style:* {patient['learning_style']}")
+                st.markdown(f"*Special Needs:* {patient['special_needs']}")
+        
+        # Generate knowledge assessment
+        if st.button("Generate Knowledge Assessment"):
+            with st.spinner("Generating personalized assessment..."):
+                assessment = generate_knowledge_assessment(patient)
+                
+                if "error" in assessment:
+                    st.error("Failed to generate assessment. Please try again.")
+                else:
+                    st.session_state.patient_assessments[patient_id] = {
+                        "assessment": assessment,
+                        "user_responses": {},
+                        "results": None
+                    }
+                    save_data()
+                    st.success("Assessment generated successfully!")
+        
+        # Display the assessment if it exists
+        if patient_id in st.session_state.patient_assessments:
+            assessment_data = st.session_state.patient_assessments[patient_id]
+            assessment = assessment_data["assessment"]
+            user_responses = assessment_data["user_responses"]
+            results = assessment_data["results"]
+            
+            st.markdown("### Knowledge Assessment")
+            
+            # Display questions and collect user responses
+            for i, question in enumerate(assessment["questions"]):
+                st.markdown(f"**Question {i+1}:** {question['text']}")
+                options = question["options"]
+                user_responses[f"question_{i}"] = st.radio(
+                    f"Select your answer for question {i+1}:",
+                    options,
+                    key=f"question_{i}"
+                )
+            
+            # Evaluate responses
+            if st.button("Submit Assessment"):
+                results = evaluate_responses(assessment, user_responses)
+                st.session_state.patient_assessments[patient_id]["results"] = results
+                save_data()
+                st.success("Assessment submitted!")
+            
+            # Display results if available
+            if results:
+                st.markdown("### Assessment Results")
+                st.markdown(f"**Total Questions:** {results['total_questions']}")
+                st.markdown(f"**Correct Answers:** {results['correct_answers']}")
+                st.markdown(f"**Incorrect Answers:** {results['incorrect_answers']}")
+                
+                st.markdown("### Feedback")
+                for feedback in results["feedback"]:
+                    st.markdown(f"**Question:** {feedback['question']}")
+                    st.markdown(f"**Your Answer:** {feedback['user_answer']}")
+                    st.markdown(f"**Correct Answer:** {feedback['correct_answer']}")
+                    st.markdown(f"**Feedback:** {feedback['feedback']}")
+                    st.markdown("---")
