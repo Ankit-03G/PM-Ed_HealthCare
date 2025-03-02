@@ -2,8 +2,6 @@
 
 ### Personalized Medical Education using Generative AI
 
-![PM-Ed HealthCare](https://github.com/Ankit-03G/PM-Ed_HealthCare/raw/main/assets/banner.png)
-
 ## 📌 Overview
 PM-Ed HealthCare is a Generative AI-powered solution designed to create **personalized patient education materials** tailored to individual medical conditions, literacy levels, and language preferences. By leveraging AI, we aim to bridge the healthcare literacy gap and enhance patient engagement.
 
@@ -43,7 +41,7 @@ python app.py
 ```
 
 ## 🎥 Demo Video
-[Watch on YouTube](https://www.youtube.com/watch?v=XXXXX) *(Replace with actual link)*
+[Watch on YouTube](https://youtu.be/Xz1cVOHL2c4)
 
 ## 📌 Future Scope
 - Integration with **Wearable Devices** for real-time patient education.
@@ -57,8 +55,8 @@ We welcome contributions! Feel free to open issues, submit pull requests, and im
 This project is licensed under the **MIT License**.
 
 ## 📞 Contact
-- **Maintainer**: [Your Name]
-- **Email**: your.email@example.com
+- **Maintainer**: Team Elite
+- **Email**: ankitkumargupta030204@gmail.com
 - **GitHub**: [@Ankit-03G](https://github.com/Ankit-03G)
 
 ---
