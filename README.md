@@ -6,7 +6,7 @@
 PM-Ed HealthCare is a Generative AI-powered solution designed to create **personalized patient education materials** tailored to individual medical conditions, literacy levels, and language preferences. By leveraging AI, we aim to bridge the healthcare literacy gap and enhance patient engagement.
 
 ## 🚀 Features
-- **AI-Generated Educational Content**: Delivers patient-specific explanations of medical conditions, medications, and procedures.
+- **AI-Generated Educational  Content**: Delivers patient-specific explanations of medical conditions, medications, and procedures.
 - **Multi-Modal Delivery**: Text, audio, and video-based patient education materials.
 - **Adaptive Learning**: Adjusts content based on patient feedback and engagement.
 - **Multi-Language Support**: Breaks language barriers for non-native speakers.
